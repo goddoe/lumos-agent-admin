@@ -46,7 +46,6 @@ export function ThresholdComparison({ data, currentThreshold = 0.7, onThresholdC
                       isCurrentThreshold ? 'text-primary' : 'text-foreground'
                     }`}>
                       임계값 {item.threshold}
-                      {isCurrentThreshold && <span className="ml-2 text-xs">(현재 적용)</span>}
                     </p>
                   </div>
                 </div>

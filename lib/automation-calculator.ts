@@ -166,12 +166,24 @@ export async function calculateAutomationRates(
     const totalQuestions = answers.length;
     const automatedQuestions = answers.filter(answer => isQuestionAutomated(answer, threshold)).length;
     const automationRate = totalQuestions > 0 ? (automatedQuestions / totalQuestions) * 100 : 0;
+    
+    // Count questions with AI answers (not version count, but question count)
+    const aiAnswersCount = answers.filter(answer => 
+      answer.versions.some(v => v.generated_from === 'ai' && !v.is_deleted)
+    ).length;
+    
+    // Count questions with Human answers (not version count, but question count)  
+    const humanAnswersCount = answers.filter(answer => 
+      answer.versions.some(v => v.generated_from === 'human' && !v.is_deleted)
+    ).length;
 
     rates.push({
       period: periodKey,
       total_questions: totalQuestions,
       automated_questions: automatedQuestions,
       automation_rate: automationRate,
+      ai_answers_count: aiAnswersCount,
+      human_answers_count: humanAnswersCount,
       timestamp: new Date(periodKey)
     });
   });
@@ -208,11 +220,22 @@ export async function getDashboardStats(threshold: number = 0.7): Promise<Dashbo
   const totalQuestions = allAnswers.length;
   const automatedQuestions = allAnswers.filter(answer => isQuestionAutomated(answer, threshold)).length;
   const overallAutomationRate = totalQuestions > 0 ? (automatedQuestions / totalQuestions) * 100 : 0;
+  
+  // Count overall AI and Human answers (questions with those answer types)
+  const aiAnswersCount = allAnswers.filter(answer => 
+    answer.versions.some(v => v.generated_from === 'ai' && !v.is_deleted)
+  ).length;
+  
+  const humanAnswersCount = allAnswers.filter(answer => 
+    answer.versions.some(v => v.generated_from === 'human' && !v.is_deleted)
+  ).length;
 
   return {
     total_questions: totalQuestions,
     automated_questions: automatedQuestions,
     overall_automation_rate: overallAutomationRate,
+    ai_answers_count: aiAnswersCount,
+    human_answers_count: humanAnswersCount,
     threshold_comparison: thresholdComparison,
     hourly_rates: hourlyRates,
     daily_rates: dailyRates,

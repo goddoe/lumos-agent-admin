@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Calendar } from 'lucide-react';
+import { Filter, Eye, Calendar, Bot, User, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
 import { ResponseDetail } from '@/components/ResponseDetail';
+import { getSimilarityScore } from '@/lib/text-similarity';
 import { Answer } from '@/lib/types';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -23,11 +24,14 @@ export default function ResponsesPage() {
   const [data, setData] = useState<ResponsesPageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'automated' | 'manual'>('all');
   const [selectedAnswer, setSelectedAnswer] = useState<Answer | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  
+  // New filter states
+  const [similarityThreshold, setSimilarityThreshold] = useState<number[]>([0.7]);
+  const [filterHumanExists, setFilterHumanExists] = useState(false);
+  const [filterAutomatedOnly, setFilterAutomatedOnly] = useState(false);
 
   useEffect(() => {
     const fetchResponses = async () => {
@@ -36,8 +40,7 @@ export default function ResponsesPage() {
         const params = new URLSearchParams({
           page: currentPage.toString(),
           limit: '10',
-          search: searchTerm,
-          filter: filterStatus
+          human_exists: filterHumanExists.toString()
         });
         
         const response = await fetch(`/api/responses?${params}`);
@@ -54,7 +57,7 @@ export default function ResponsesPage() {
     };
 
     fetchResponses();
-  }, [currentPage, searchTerm, filterStatus]);
+  }, [currentPage, filterHumanExists, filterAutomatedOnly, similarityThreshold]);
 
   const getQuestionText = (answer: Answer): string => {
     const firstMessage = answer.request.messages.find(msg => msg.role === 'user');
@@ -86,7 +89,17 @@ export default function ResponsesPage() {
 
   const isAutomated = (answer: Answer): boolean => {
     const { ai, human } = getLatestVersions(answer);
-    return !!(ai && human);
+    if (!ai || !human) return false;
+    
+    const similarity = getSimilarityScore(ai.result.answer.content, human.result.answer.content);
+    return similarity >= similarityThreshold[0];
+  };
+  
+  const getSimilarity = (answer: Answer): number => {
+    const { ai, human } = getLatestVersions(answer);
+    if (!ai || !human) return 0;
+    
+    return getSimilarityScore(ai.result.answer.content, human.result.answer.content);
   };
 
   if (loading) {
@@ -123,63 +136,150 @@ export default function ResponsesPage() {
         </p>
       </div>
 
-      {/* Search and Filters */}
+      {/* Filters */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="질문 내용으로 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+          <div className="space-y-6">
+            {/* Similarity Threshold */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">유사도 임계값</label>
+                <span className="text-sm text-muted-foreground">{Math.round(similarityThreshold[0] * 100)}%</span>
+              </div>
+              <Slider
+                value={similarityThreshold}
+                onValueChange={setSimilarityThreshold}
+                max={1}
+                min={0}
+                step={0.05}
+                className="w-full"
               />
+              <p className="text-xs text-muted-foreground">
+                이 값 이상의 유사도를 가진 응답을 "자동화됨"으로 분류합니다
+              </p>
             </div>
-            <div className="flex gap-2">
-              <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as 'all' | 'automated' | 'manual')}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  <SelectItem value="automated">자동화됨</SelectItem>
-                  <SelectItem value="manual">수동</SelectItem>
-                </SelectContent>
-              </Select>
+            
+            {/* Existence Filters */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">응답 필터</label>
+              <div className="flex gap-6">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="human-exists"
+                    checked={filterHumanExists}
+                    onCheckedChange={setFilterHumanExists}
+                  />
+                  <label htmlFor="human-exists" className="text-sm flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    Human 응답이 있는 경우만
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="automated-only"
+                    checked={filterAutomatedOnly}
+                    onCheckedChange={setFilterAutomatedOnly}
+                  />
+                  <label htmlFor="automated-only" className="text-sm flex items-center gap-1">
+                    <Zap className="h-4 w-4" />
+                    자동화된 응답만
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Results Summary */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          총 {data.total}개의 응답 (페이지 {data.page} / {data.totalPages})
-        </p>
-      </div>
+      {(() => {
+        const filteredAnswers = data.answers.filter((answer) => {
+          // Apply human exists filter if enabled
+          if (filterHumanExists) {
+            const { human } = getLatestVersions(answer);
+            if (!human) return false;
+          }
+          
+          // Apply automated-only filter if enabled
+          if (filterAutomatedOnly) {
+            const automated = isAutomated(answer);
+            return automated;
+          }
+          return true;
+        });
+        
+        return (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {(filterHumanExists || filterAutomatedOnly) ? (
+                <>필터된 {filteredAnswers.length}개의 응답 (전체 {data.total}개 중)</>
+              ) : (
+                <>총 {data.total}개의 응답 (페이지 {data.page} / {data.totalPages})</>
+              )}
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Response List */}
       <div className="space-y-4">
-        {data.answers.map((answer) => {
+        {data.answers
+          .filter((answer) => {
+            // Apply human exists filter if enabled
+            if (filterHumanExists) {
+              const { human } = getLatestVersions(answer);
+              if (!human) return false;
+            }
+            
+            // Apply automated-only filter if enabled
+            if (filterAutomatedOnly) {
+              const automated = isAutomated(answer);
+              return automated;
+            }
+            return true;
+          })
+          .map((answer) => {
           const questionText = getQuestionText(answer);
           const { ai, human } = getLatestVersions(answer);
           const automated = isAutomated(answer);
+          const similarity = getSimilarity(answer);
           
           return (
             <Card key={answer._id} className="border-border/40">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        automated 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {automated ? '자동화됨' : '수동'}
-                      </span>
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {/* AI Response Tag */}
+                      {ai && (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
+                          <Bot className="h-3 w-3 mr-1" />
+                          AI 응답
+                        </span>
+                      )}
+                      
+                      {/* Human Response Tag */}
+                      {human && (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+                          <User className="h-3 w-3 mr-1" />
+                          Human 응답
+                        </span>
+                      )}
+                      
+                      {/* Automation Tag */}
+                      {automated && (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800">
+                          자동화됨
+                        </span>
+                      )}
+                      
+                      {/* Similarity Score */}
+                      {ai && human && (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">
+                          유사도 {Math.round(similarity * 100)}%
+                        </span>
+                      )}
+                      
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         {format(new Date(typeof answer.created_at === 'object' && '$date' in answer.created_at ? answer.created_at.$date : answer.created_at), 'yyyy년 MM월 dd일 HH:mm', { locale: ko })}
@@ -189,8 +289,6 @@ export default function ResponsesPage() {
                       {questionText}
                     </h3>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>AI 버전: {ai ? '있음' : '없음'}</span>
-                      <span>인간 버전: {human ? '있음' : '없음'}</span>
                       <span>총 버전: {answer.versions.length}개</span>
                     </div>
                   </div>

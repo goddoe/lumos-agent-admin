@@ -3,15 +3,15 @@
 import { Button } from '@/components/ui/button';
 
 interface PeriodSelectorProps {
-  selectedPeriod: 'day' | 'week' | 'month';
-  onPeriodChange: (period: 'day' | 'week' | 'month') => void;
+  selectedPeriod: 'week' | 'month' | 'year';
+  onPeriodChange: (period: 'week' | 'month' | 'year') => void;
 }
 
 export function PeriodSelector({ selectedPeriod, onPeriodChange }: PeriodSelectorProps) {
   const periods = [
-    { value: 'day', label: '일별 (24시간)' },
-    { value: 'week', label: '주별 (7일)' },
-    { value: 'month', label: '월별 (6개월)' }
+    { value: 'week', label: '일별' },
+    { value: 'month', label: '주별' },
+    { value: 'year', label: '월별' }
   ] as const;
 
   return (

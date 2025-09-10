@@ -57,6 +57,8 @@ export interface AutomationRate {
   total_questions: number;
   automated_questions: number;
   automation_rate: number;
+  ai_answers_count: number;
+  human_answers_count: number;
   timestamp: Date;
 }
 
@@ -70,6 +72,8 @@ export interface DashboardStats {
   total_questions: number;
   automated_questions: number;
   overall_automation_rate: number;
+  ai_answers_count: number;
+  human_answers_count: number;
   threshold_comparison: ThresholdAutomationRate[];
   hourly_rates: AutomationRate[];
   daily_rates: AutomationRate[];

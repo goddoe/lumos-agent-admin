@@ -63,7 +63,7 @@ export function AutomationChart({ data, title }: AutomationChartProps) {
           </ResponsiveContainer>
         </div>
         
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-5 gap-4">
           <div className="text-center space-y-1">
             <p className="text-sm text-muted-foreground">평균 자동화율</p>
             <p className="text-2xl font-bold">
@@ -82,6 +82,18 @@ export function AutomationChart({ data, title }: AutomationChartProps) {
             <p className="text-sm text-muted-foreground">자동화된 답변</p>
             <p className="text-2xl font-bold">
               {data.reduce((sum, item) => sum + item.automated_questions, 0).toLocaleString()}
+            </p>
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-sm text-muted-foreground">AI 답변수</p>
+            <p className="text-2xl font-bold">
+              {data.reduce((sum, item) => sum + item.ai_answers_count, 0).toLocaleString()}
+            </p>
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-sm text-muted-foreground">User 답변수</p>
+            <p className="text-2xl font-bold">
+              {data.reduce((sum, item) => sum + item.human_answers_count, 0).toLocaleString()}
             </p>
           </div>
         </div>

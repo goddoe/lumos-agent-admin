@@ -9,6 +9,7 @@ import { Answer, Version } from '@/lib/types';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { getSimilarityScore } from '@/lib/text-similarity';
+import { computeTextHighlightWithUnique, mergeConsecutiveSegments } from '@/lib/text-diff';
 
 interface ResponseDetailProps {
   answer: Answer | null;
@@ -39,7 +40,12 @@ function getLatestVersions(answer: Answer) {
   };
 }
 
-function VersionCard({ version, type }: { version: Version | undefined; type: 'ai' | 'human' }) {
+function VersionCard({ version, type, otherVersion, showDiff }: { 
+  version: Version | undefined; 
+  type: 'ai' | 'human';
+  otherVersion?: Version;
+  showDiff?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -104,8 +110,46 @@ function VersionCard({ version, type }: { version: Version | undefined; type: 'a
       </CardHeader>
       <CardContent>
         <div className="prose prose-sm max-w-none">
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">
-            {version.result.answer.content}
+          <div className="whitespace-pre-line text-sm leading-relaxed">
+            {showDiff && otherVersion ? (
+              (() => {
+                const currentText = version.result.answer.content;
+                const otherText = otherVersion.result.answer.content;
+                // Use AI text as text1 and Human text as text2 for consistent comparison
+                const isAI = type === 'ai';
+                const highlights = computeTextHighlightWithUnique(
+                  isAI ? currentText : otherText, // text1: AI text
+                  isAI ? otherText : currentText, // text2: Human text  
+                  currentText // target text we're displaying
+                );
+                const mergedHighlights = mergeConsecutiveSegments(highlights);
+                
+                return (
+                  <div className="whitespace-pre-line">
+                    {mergedHighlights.map((segment, index) => {
+                      if (segment.type === 'common') {
+                        // Common parts - subtle blue highlight without padding
+                        return (
+                          <span key={index} className="bg-blue-50 text-blue-900 rounded-sm whitespace-pre-line">
+                            {segment.text}
+                          </span>
+                        );
+                      } else if (segment.type === 'added') {
+                        // Unique parts - distinct colors for AI vs Human without padding
+                        return (
+                          <span key={index} className={`whitespace-pre-line rounded-sm font-medium ${type === 'ai' ? "bg-orange-100 text-orange-800" : "bg-green-100 text-green-800"}`}>
+                            {segment.text}
+                          </span>
+                        );
+                      }
+                      return <span key={index} className="whitespace-pre-line">{segment.text}</span>;
+                    })}
+                  </div>
+                );
+              })()
+            ) : (
+              version.result.answer.content
+            )}
           </div>
         </div>
         
@@ -188,8 +232,8 @@ export function ResponseDetail({ answer, open, onOpenChange }: ResponseDetailPro
 
           {/* Response Comparison */}
           <div className="flex flex-col lg:flex-row gap-6">
-            <VersionCard version={ai} type="ai" />
-            <VersionCard version={human} type="human" />
+            <VersionCard version={ai} type="ai" otherVersion={human} showDiff={!!(ai && human)} />
+            <VersionCard version={human} type="human" otherVersion={ai} showDiff={!!(ai && human)} />
           </div>
 
           {/* Context Information */}

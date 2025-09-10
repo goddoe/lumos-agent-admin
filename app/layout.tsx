@@ -22,12 +22,6 @@ export default function RootLayout({
                 <h1 className="text-xl font-bold tracking-tight">
                   Lumos Agent Admin
                 </h1>
-                <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
-                  자동화 대시보드
-                </span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                정부 사업비 집행 질의응답 자동화 모니터링
               </div>
             </div>
           </header>

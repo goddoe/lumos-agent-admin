@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, MessageSquare, CheckCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, MessageSquare, CheckCircle, Bot, User } from 'lucide-react';
 import { StatCard } from '@/components/StatCard';
 import { AutomationChart } from '@/components/AutomationChart';
 import { PeriodSelector } from '@/components/PeriodSelector';
@@ -11,7 +11,7 @@ import { DashboardStats, AutomationRate } from '@/lib/types';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('week');
   const [filteredData, setFilteredData] = useState<AutomationRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,17 +43,14 @@ export default function Dashboard() {
     if (!stats) return;
 
     switch (selectedPeriod) {
-      case 'day':
-        console.log('Setting hourly_rates:', stats.hourly_rates);
-        setFilteredData(stats.hourly_rates);
-        break;
       case 'week':
-        console.log('Setting daily_rates:', stats.daily_rates);
         setFilteredData(stats.daily_rates);
         break;
       case 'month':
-        console.log('Setting weekly_rates:', stats.weekly_rates);
         setFilteredData(stats.weekly_rates);
+        break;
+      case 'year':
+        setFilteredData(stats.monthly_rates);
         break;
     }
   }, [stats, selectedPeriod]);
@@ -93,12 +90,30 @@ export default function Dashboard() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <StatCard
           title="전체 질문 수"
           value={stats.total_questions.toLocaleString()}
           icon={MessageSquare}
           subtitle="누적 총 질문"
+        />
+        <StatCard
+          title="분석 데이터"
+          value={`${stats.daily_rates.length}일`}
+          icon={BarChart3}
+          subtitle="최근 분석 기간"
+        />
+        <StatCard
+          title="AI 답변수"
+          value={stats.ai_answers_count.toLocaleString()}
+          icon={Bot}
+          subtitle="AI 버전이 있는 질문"
+        />
+        <StatCard
+          title="User 답변수"
+          value={stats.human_answers_count.toLocaleString()}
+          icon={User}
+          subtitle="사람 버전이 있는 질문"
         />
         <StatCard
           title="자동화된 답변"
@@ -111,12 +126,6 @@ export default function Dashboard() {
           value={`${stats.overall_automation_rate.toFixed(1)}%`}
           icon={TrendingUp}
           subtitle="누적 자동화 비율"
-        />
-        <StatCard
-          title="분석 데이터"
-          value={`${stats.daily_rates.length}일`}
-          icon={BarChart3}
-          subtitle="최근 분석 기간"
         />
       </div>
 
@@ -133,7 +142,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <AutomationChart
           data={filteredData}
-          title={`${selectedPeriod === 'day' ? '시간별' : selectedPeriod === 'week' ? '일별' : selectedPeriod === 'month' ? '주별' : '월별'} 자동화율`}
+          title={`${selectedPeriod === 'week' ? '일별' : selectedPeriod === 'month' ? '주별' : '월별'} 자동화율`}
         />
         
         <ThresholdComparison 
