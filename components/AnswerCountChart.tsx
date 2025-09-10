@@ -1,17 +1,17 @@
 'use client';
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { AutomationRate } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { format, startOfWeek, endOfWeek, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
-interface AutomationChartProps {
+interface AnswerCountChartProps {
   data: AutomationRate[];
   title: string;
 }
 
-export function AutomationChart({ data, title }: AutomationChartProps) {
+export function AnswerCountChart({ data, title }: AnswerCountChartProps) {
   const chartData = data.map(item => {
     let displayPeriod = item.period;
     
@@ -36,7 +36,8 @@ export function AutomationChart({ data, title }: AutomationChartProps) {
     return {
       period: displayPeriod,
       originalPeriod: item.period,
-      rate: item.automation_rate
+      ai_count: item.ai_answers_count,
+      human_count: item.human_answers_count
     };
   });
 
@@ -48,7 +49,7 @@ export function AutomationChart({ data, title }: AutomationChartProps) {
       <CardContent>
         <div className="h-96 mb-6">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
+            <ComposedChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="period" 
@@ -59,14 +60,14 @@ export function AutomationChart({ data, title }: AutomationChartProps) {
                 stroke="hsl(var(--border))"
               />
               <YAxis 
-                domain={[0, 100]}
                 tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                label={{ value: '자동화 비율 (%)', angle: -90, position: 'insideLeft' }}
+                label={{ value: '답변 수', angle: -90, position: 'insideLeft' }}
                 stroke="hsl(var(--border))"
               />
               <Tooltip 
                 formatter={(value: number, name: string) => {
-                  if (name === 'rate') return [`${value.toFixed(1)}%`, '자동화 비율'];
+                  if (name === 'ai_count') return [`${value}개`, 'AI 답변'];
+                  if (name === 'human_count') return [`${value}개`, 'User 답변'];
                   return [value, name];
                 }}
                 labelFormatter={(label) => `기간: ${label}`}
@@ -79,7 +80,8 @@ export function AutomationChart({ data, title }: AutomationChartProps) {
               />
               <Legend 
                 formatter={(value, entry) => {
-                  if (value === 'rate') return '자동화 비율';
+                  if (value === 'ai_count') return 'AI 답변';
+                  if (value === 'human_count') return 'User 답변';
                   return value;
                 }}
                 wrapperStyle={{ 
@@ -91,36 +93,37 @@ export function AutomationChart({ data, title }: AutomationChartProps) {
               />
               <Line 
                 type="monotone" 
-                dataKey="rate" 
-                stroke="hsl(var(--primary))" 
+                dataKey="ai_count" 
+                stroke="#2563eb" 
                 strokeWidth={2.5}
-                dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
-                name="rate"
+                dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, fill: '#2563eb' }}
+                name="ai_count"
               />
-            </LineChart>
+              <Line 
+                type="monotone" 
+                dataKey="human_count" 
+                stroke="#16a34a" 
+                strokeWidth={2.5}
+                dot={{ fill: '#16a34a', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, fill: '#16a34a' }}
+                name="human_count"
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
         
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="text-center space-y-1">
-            <p className="text-sm text-muted-foreground">평균 자동화율</p>
+            <p className="text-sm text-muted-foreground">총 AI 답변수</p>
             <p className="text-2xl font-bold">
-              {data.length > 0 
-                ? (data.reduce((sum, item) => sum + item.automation_rate, 0) / data.length).toFixed(1)
-                : 0}%
+              {data.reduce((sum, item) => sum + item.ai_answers_count, 0).toLocaleString()}
             </p>
           </div>
           <div className="text-center space-y-1">
-            <p className="text-sm text-muted-foreground">총 질문</p>
+            <p className="text-sm text-muted-foreground">총 User 답변수</p>
             <p className="text-2xl font-bold">
-              {data.reduce((sum, item) => sum + item.total_questions, 0).toLocaleString()}
-            </p>
-          </div>
-          <div className="text-center space-y-1">
-            <p className="text-sm text-muted-foreground">자동화된 답변</p>
-            <p className="text-2xl font-bold">
-              {data.reduce((sum, item) => sum + item.automated_questions, 0).toLocaleString()}
+              {data.reduce((sum, item) => sum + item.human_answers_count, 0).toLocaleString()}
             </p>
           </div>
         </div>

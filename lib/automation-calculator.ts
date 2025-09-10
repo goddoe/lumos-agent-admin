@@ -6,6 +6,7 @@ import {
   startOfDay, 
   startOfWeek, 
   startOfMonth,
+  endOfWeek,
   format,
   subHours,
   subDays,
@@ -82,7 +83,7 @@ export async function calculateThresholdComparison(): Promise<ThresholdAutomatio
   const collection = db.collection<Answer>('answers');
   
   const answers = await collection.find({}).toArray();
-  const thresholds = [0.5, 0.6, 0.7, 0.8, 0.9];
+  const thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
   
   return thresholds.map(threshold => {
     const automatedQuestions = answers.filter(answer => isQuestionAutomated(answer, threshold)).length;
@@ -141,9 +142,10 @@ export async function calculateAutomationRates(
         break;
       case 'week':
         periodStart = startOfWeek(date, { weekStartsOn: 1 }); // Monday start
-        const weekNum = getWeek(date, { weekStartsOn: 1 });
-        const year = getYear(date);
-        periodKey = `${year}년 ${weekNum}주차`;
+        const periodEnd = endOfWeek(date, { weekStartsOn: 1 }); // Sunday end
+        const startFormatted = format(periodStart, 'yyyy년 MM월 dd일', { locale: ko });
+        const endFormatted = format(periodEnd, 'dd일', { locale: ko });
+        periodKey = `${startFormatted}~${endFormatted}`;
         break;
       case 'month':
         periodStart = startOfMonth(date);

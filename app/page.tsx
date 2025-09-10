@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, MessageSquare, CheckCircle, Bot, User } from 'lucide-react';
 import { StatCard } from '@/components/StatCard';
 import { AutomationChart } from '@/components/AutomationChart';
+import { AnswerCountChart } from '@/components/AnswerCountChart';
 import { PeriodSelector } from '@/components/PeriodSelector';
 import { ThresholdComparison } from '@/components/ThresholdComparison';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,11 +12,11 @@ import { DashboardStats, AutomationRate } from '@/lib/types';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('week');
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [filteredData, setFilteredData] = useState<AutomationRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedThreshold, setSelectedThreshold] = useState<number>(0.7);
+  const [selectedThreshold, setSelectedThreshold] = useState<number>(0.5);
 
   // Fetch dashboard stats
   useEffect(() => {
@@ -139,11 +140,18 @@ export default function Dashboard() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AutomationChart
-          data={filteredData}
-          title={`${selectedPeriod === 'week' ? '일별' : selectedPeriod === 'month' ? '주별' : '월별'} 자동화율`}
-        />
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AutomationChart
+            data={filteredData}
+            title={`${selectedPeriod === 'week' ? '일별' : selectedPeriod === 'month' ? '주별' : '월별'} 자동화율`}
+          />
+          
+          <AnswerCountChart
+            data={filteredData}
+            title={`${selectedPeriod === 'week' ? '일별' : selectedPeriod === 'month' ? '주별' : '월별'} 답변 수`}
+          />
+        </div>
         
         <ThresholdComparison 
           data={stats.threshold_comparison}
