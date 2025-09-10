@@ -108,23 +108,15 @@ export async function calculateAutomationRates(
   const db = await getDatabase();
   const collection = db.collection<Answer>('answers');
 
-  // Get all answers in the time range - fix the date field query
+  // Get all answers in the time range - use Date objects for comparison
   const answers = await collection.find({
-    $or: [
-      {
-        'created_at.$date': {
-          $gte: startDate.toISOString(),
-          $lte: endDate.toISOString()
-        }
-      },
-      {
-        'created_at': {
-          $gte: startDate.toISOString(),
-          $lte: endDate.toISOString()
-        }
-      }
-    ]
+    'created_at': {
+      $gte: startDate,
+      $lte: endDate
+    }
   }).toArray();
+  
+  console.log(`Found ${answers.length} answers in date range ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
   // Group answers by time period
   const groupedAnswers = new Map<string, Answer[]>();
@@ -193,14 +185,18 @@ export async function calculateAutomationRates(
 export async function getDashboardStats(threshold: number = 0.7): Promise<DashboardStats> {
   const now = new Date();
   
-  // Calculate different time periods - TEMPORARILY expand ranges for debugging
-  const fiveYearsAgo = subMonths(now, 60);
+  // Calculate different time periods - get last 6 months of data to show proper monthly/weekly breakdown
+  const sixMonthsAgo = subMonths(now, 6);
+  
+  // Use actual data date range: 2025-07-22 to 2025-09-10
+  const dataStartDate = new Date('2025-07-22T00:00:00.000Z');
+  const dataEndDate = new Date('2025-09-10T23:59:59.999Z');
   
   const [hourlyRates, dailyRates, weeklyRates, monthlyRates, thresholdComparison] = await Promise.all([
-    calculateAutomationRates(subDays(now, 30), now, 'hour', threshold),     // Last 30 days by hour (expanded)
-    calculateAutomationRates(subMonths(now, 6), now, 'day', threshold),     // Last 6 months by day (expanded)
-    calculateAutomationRates(subMonths(now, 24), now, 'week', threshold),   // Last 2 years by week (expanded)
-    calculateAutomationRates(fiveYearsAgo, now, 'month', threshold),        // Last 5 years by month (expanded)
+    calculateAutomationRates(dataStartDate, dataEndDate, 'hour', threshold),   // Use actual data range
+    calculateAutomationRates(dataStartDate, dataEndDate, 'day', threshold),    // Use actual data range
+    calculateAutomationRates(dataStartDate, dataEndDate, 'week', threshold),   // Use actual data range
+    calculateAutomationRates(dataStartDate, dataEndDate, 'month', threshold),  // Use actual data range
     calculateThresholdComparison()
   ]);
 

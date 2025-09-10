@@ -44,12 +44,15 @@ export default function Dashboard() {
 
     switch (selectedPeriod) {
       case 'day':
+        console.log('Setting hourly_rates:', stats.hourly_rates);
         setFilteredData(stats.hourly_rates);
         break;
       case 'week':
+        console.log('Setting daily_rates:', stats.daily_rates);
         setFilteredData(stats.daily_rates);
         break;
       case 'month':
+        console.log('Setting weekly_rates:', stats.weekly_rates);
         setFilteredData(stats.weekly_rates);
         break;
     }
