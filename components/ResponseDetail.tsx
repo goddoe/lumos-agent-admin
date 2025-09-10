@@ -128,16 +128,16 @@ function VersionCard({ version, type, otherVersion, showDiff }: {
                   <div className="whitespace-pre-line">
                     {mergedHighlights.map((segment, index) => {
                       if (segment.type === 'common') {
-                        // Common parts - subtle blue highlight without padding
+                        // Common parts - green highlight for both AI and Human
                         return (
-                          <span key={index} className="bg-blue-50 text-blue-900 rounded-sm whitespace-pre-line">
+                          <span key={index} className="bg-green-100 text-green-800 rounded-sm whitespace-pre-line">
                             {segment.text}
                           </span>
                         );
                       } else if (segment.type === 'added') {
-                        // Unique parts - distinct colors for AI vs Human without padding
+                        // Different parts - orange highlight for both AI and Human
                         return (
-                          <span key={index} className={`whitespace-pre-line rounded-sm font-medium ${type === 'ai' ? "bg-orange-100 text-orange-800" : "bg-green-100 text-green-800"}`}>
+                          <span key={index} className="bg-orange-100 text-orange-800 rounded-sm font-medium whitespace-pre-line">
                             {segment.text}
                           </span>
                         );

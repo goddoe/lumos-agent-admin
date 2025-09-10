@@ -37,9 +37,13 @@ export default function ResponsesPage() {
     const fetchResponses = async () => {
       try {
         setLoading(true);
+        
+        // If filters are active, fetch all data for client-side filtering
+        const shouldFetchAll = filterHumanExists || filterAutomatedOnly;
+        
         const params = new URLSearchParams({
-          page: currentPage.toString(),
-          limit: '10',
+          page: shouldFetchAll ? '1' : currentPage.toString(),
+          limit: shouldFetchAll ? '1000' : '10', // Fetch more data when filtering
           human_exists: filterHumanExists.toString()
         });
         
@@ -59,12 +63,34 @@ export default function ResponsesPage() {
     fetchResponses();
   }, [currentPage, filterHumanExists, filterAutomatedOnly, similarityThreshold]);
 
+  // Debug: Log automation stats when data changes
+  useEffect(() => {
+    if (data) {
+      const automatedCount = data.answers.filter(answer => isAutomated(answer)).length;
+      const withBothVersions = data.answers.filter(answer => {
+        const { ai, human } = getLatestVersions(answer);
+        return ai && human;
+      }).length;
+      console.log(`Automation stats: ${automatedCount} automated out of ${withBothVersions} with both versions (total: ${data.answers.length})`);
+    }
+  }, [data, similarityThreshold]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterHumanExists, filterAutomatedOnly]);
+
   const getQuestionText = (answer: Answer): string => {
     const firstMessage = answer.request.messages.find(msg => msg.role === 'user');
     return firstMessage?.content || '질문 내용을 찾을 수 없습니다';
   };
 
   const getLatestVersions = (answer: Answer) => {
+    console.log('All versions for', answer.qid, ':', answer.versions.map(v => ({ 
+      generated_from: v.generated_from, 
+      is_deleted: v.is_deleted 
+    })));
+    
     const aiVersions = answer.versions
       .filter(v => v.generated_from === 'ai' && !v.is_deleted)
       .sort((a, b) => {
@@ -81,6 +107,11 @@ export default function ResponsesPage() {
         return dateB - dateA;
       });
 
+    console.log('Filtered versions:', { 
+      ai: aiVersions.length, 
+      human: humanVersions.length 
+    });
+
     return {
       ai: aiVersions[0],
       human: humanVersions[0]
@@ -89,10 +120,20 @@ export default function ResponsesPage() {
 
   const isAutomated = (answer: Answer): boolean => {
     const { ai, human } = getLatestVersions(answer);
-    if (!ai || !human) return false;
+    if (!ai || !human) {
+      console.log('Missing AI or Human version:', { ai: !!ai, human: !!human, qid: answer.qid });
+      return false;
+    }
     
     const similarity = getSimilarityScore(ai.result.answer.content, human.result.answer.content);
-    return similarity >= similarityThreshold[0];
+    const automated = similarity >= similarityThreshold[0];
+    console.log('Automation check:', { 
+      qid: answer.qid, 
+      similarity, 
+      threshold: similarityThreshold[0], 
+      automated 
+    });
+    return automated;
   };
   
   const getSimilarity = (answer: Answer): number => {
@@ -203,10 +244,14 @@ export default function ResponsesPage() {
           // Apply automated-only filter if enabled
           if (filterAutomatedOnly) {
             const automated = isAutomated(answer);
-            return automated;
+            console.log(`Filter check for ${answer.qid}: automated=${automated}, filterAutomatedOnly=${filterAutomatedOnly}`);
+            if (!automated) return false;
           }
+          
           return true;
         });
+
+        console.log(`Total answers: ${data.answers.length}, Filtered: ${filteredAnswers.length}, AutomatedFilter: ${filterAutomatedOnly}`);
         
         return (
           <div className="flex items-center justify-between">
@@ -234,8 +279,9 @@ export default function ResponsesPage() {
             // Apply automated-only filter if enabled
             if (filterAutomatedOnly) {
               const automated = isAutomated(answer);
-              return automated;
+              if (!automated) return false;
             }
+            
             return true;
           })
           .map((answer) => {
@@ -311,8 +357,8 @@ export default function ResponsesPage() {
         })}
       </div>
 
-      {/* Pagination */}
-      {data.totalPages > 1 && (
+      {/* Pagination - Hide when filters are active */}
+      {data.totalPages > 1 && !filterHumanExists && !filterAutomatedOnly && (
         <div className="flex items-center justify-center gap-2">
           <Button
             variant="outline"
@@ -333,6 +379,15 @@ export default function ResponsesPage() {
           >
             다음
           </Button>
+        </div>
+      )}
+      
+      {/* Filter active message */}
+      {(filterHumanExists || filterAutomatedOnly) && (
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">
+            필터가 활성화되어 있어 모든 결과를 한 페이지에 표시합니다
+          </p>
         </div>
       )}
 
