@@ -3,15 +3,44 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { AutomationRate } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, startOfWeek, endOfWeek, parse } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { useState } from 'react';
 
 interface AutomationChartProps {
   data: AutomationRate[];
   title: string;
+  threshold?: number;
+  onThresholdChange?: (threshold: number) => void;
 }
 
-export function AutomationChart({ data, title }: AutomationChartProps) {
+export function AutomationChart({ data, title, threshold = 0.5, onThresholdChange }: AutomationChartProps) {
+  const [isCustom, setIsCustom] = useState(false);
+  const [customValue, setCustomValue] = useState(threshold.toString());
+  
+  const predefinedThresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
+  
+  const handleSelectChange = (value: string) => {
+    if (value === 'custom') {
+      setIsCustom(true);
+    } else {
+      setIsCustom(false);
+      const numValue = parseFloat(value);
+      onThresholdChange?.(numValue);
+    }
+  };
+
+  const handleCustomInputChange = (value: string) => {
+    setCustomValue(value);
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= 0.1 && numValue <= 0.9) {
+      onThresholdChange?.(numValue);
+    }
+  };
+
   const chartData = data.map(item => {
     let displayPeriod = item.period;
     
@@ -43,7 +72,42 @@ export function AutomationChart({ data, title }: AutomationChartProps) {
   return (
     <Card className="border-border/40">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Label className="text-sm font-medium">
+              임계값:
+            </Label>
+            <Select
+              value={isCustom ? 'custom' : threshold.toString()}
+              onValueChange={handleSelectChange}
+            >
+              <SelectTrigger className="w-24 h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {predefinedThresholds.map((value) => (
+                  <SelectItem key={value} value={value.toString()}>
+                    {value}
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            {isCustom && (
+              <Input
+                type="number"
+                min="0.1"
+                max="0.9"
+                step="0.01"
+                value={customValue}
+                onChange={(e) => handleCustomInputChange(e.target.value)}
+                className="w-20 h-8 text-sm"
+                placeholder="0.5"
+              />
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-96 mb-6">

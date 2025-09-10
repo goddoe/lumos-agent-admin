@@ -17,13 +17,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedThreshold, setSelectedThreshold] = useState<number>(0.5);
+  const [chartThreshold, setChartThreshold] = useState<number>(0.5);
 
-  // Fetch dashboard stats
+  // Fetch dashboard stats for chart
   useEffect(() => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/automation-rates?threshold=${selectedThreshold}`);
+        const response = await fetch(`/api/automation-rates?threshold=${chartThreshold}`);
         if (!response.ok) {
           throw new Error('Failed to fetch stats');
         }
@@ -37,7 +38,7 @@ export default function Dashboard() {
     };
 
     fetchStats();
-  }, [selectedThreshold]);
+  }, [chartThreshold]);
 
   // Update filtered data when period changes
   useEffect(() => {
@@ -145,6 +146,8 @@ export default function Dashboard() {
           <AutomationChart
             data={filteredData}
             title={`${selectedPeriod === 'week' ? '일별' : selectedPeriod === 'month' ? '주별' : '월별'} 자동화율`}
+            threshold={chartThreshold}
+            onThresholdChange={setChartThreshold}
           />
           
           <AnswerCountChart
@@ -155,8 +158,9 @@ export default function Dashboard() {
         
         <ThresholdComparison 
           data={stats.threshold_comparison}
-          currentThreshold={selectedThreshold}
-          onThresholdChange={setSelectedThreshold}
+          currentThreshold={chartThreshold}
+          aiAnswersCount={stats.ai_answers_count}
+          humanAnswersCount={stats.human_answers_count}
         />
       </div>
 

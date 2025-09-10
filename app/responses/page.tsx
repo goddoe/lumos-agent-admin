@@ -5,7 +5,9 @@ import { Filter, Eye, Calendar, Bot, User, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResponseDetail } from '@/components/ResponseDetail';
 import { getSimilarityScore } from '@/lib/text-similarity';
 import { Answer } from '@/lib/types';
@@ -29,7 +31,9 @@ export default function ResponsesPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   
   // New filter states
-  const [similarityThreshold, setSimilarityThreshold] = useState<number[]>([0.7]);
+  const [similarityThreshold, setSimilarityThreshold] = useState(0.5);
+  const [isCustomThreshold, setIsCustomThreshold] = useState(false);
+  const [customThresholdValue, setCustomThresholdValue] = useState('0.5');
   const [filterHumanExists, setFilterHumanExists] = useState(false);
   const [filterAutomatedOnly, setFilterAutomatedOnly] = useState(false);
 
@@ -62,6 +66,26 @@ export default function ResponsesPage() {
 
     fetchResponses();
   }, [currentPage, filterHumanExists, filterAutomatedOnly, similarityThreshold]);
+  
+  const predefinedThresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
+  
+  const handleThresholdSelectChange = (value: string) => {
+    if (value === 'custom') {
+      setIsCustomThreshold(true);
+    } else {
+      setIsCustomThreshold(false);
+      const numValue = parseFloat(value);
+      setSimilarityThreshold(numValue);
+    }
+  };
+
+  const handleCustomThresholdChange = (value: string) => {
+    setCustomThresholdValue(value);
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= 1) {
+      setSimilarityThreshold(numValue);
+    }
+  };
 
   // Debug: Log automation stats when data changes
   useEffect(() => {
@@ -126,11 +150,11 @@ export default function ResponsesPage() {
     }
     
     const similarity = getSimilarityScore(ai.result.answer.content, human.result.answer.content);
-    const automated = similarity >= similarityThreshold[0];
+    const automated = similarity >= similarityThreshold;
     console.log('Automation check:', { 
       qid: answer.qid, 
       similarity, 
-      threshold: similarityThreshold[0], 
+      threshold: similarityThreshold, 
       automated 
     });
     return automated;
@@ -184,17 +208,39 @@ export default function ResponsesPage() {
             {/* Similarity Threshold */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">유사도 임계값</label>
-                <span className="text-sm text-muted-foreground">{Math.round(similarityThreshold[0] * 100)}%</span>
+                <Label className="text-sm font-medium">유사도 임계값</Label>
+                <span className="text-sm text-muted-foreground">{Math.round(similarityThreshold * 100)}%</span>
               </div>
-              <Slider
-                value={similarityThreshold}
-                onValueChange={setSimilarityThreshold}
-                max={1}
-                min={0}
-                step={0.05}
-                className="w-full"
-              />
+              <div className="flex items-center space-x-2">
+                <Select
+                  value={isCustomThreshold ? 'custom' : similarityThreshold.toString()}
+                  onValueChange={handleThresholdSelectChange}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {predefinedThresholds.map((value) => (
+                      <SelectItem key={value} value={value.toString()}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+                {isCustomThreshold && (
+                  <Input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={customThresholdValue}
+                    onChange={(e) => handleCustomThresholdChange(e.target.value)}
+                    className="w-24"
+                    placeholder="0.5"
+                  />
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 이 값 이상의 유사도를 가진 응답을 "자동화됨"으로 분류합니다
               </p>

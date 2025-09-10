@@ -1,69 +1,76 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ThresholdAutomationRate } from '@/lib/types';
 
 interface ThresholdComparisonProps {
   data: ThresholdAutomationRate[];
   currentThreshold?: number;
-  onThresholdChange?: (threshold: number) => void;
+  aiAnswersCount?: number;
+  humanAnswersCount?: number;
 }
 
-export function ThresholdComparison({ data, currentThreshold = 0.7, onThresholdChange }: ThresholdComparisonProps) {
+export function ThresholdComparison({ data, currentThreshold = 0.5, aiAnswersCount, humanAnswersCount }: ThresholdComparisonProps) {
   return (
     <Card className="border-border/40">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">임계값별 자동화율 비교</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          다양한 유사도 임계값에 따른 자동화 판단 결과 (클릭하여 선택)
-        </p>
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground">
+            다양한 유사도 임계값에 따른 자동화 판단 결과
+          </p>
+          {(aiAnswersCount !== undefined || humanAnswersCount !== undefined) && (
+            <div className="flex items-center space-x-4 text-sm">
+              {aiAnswersCount !== undefined && (
+                <span>
+                  <strong className="font-semibold">AI 답변수:</strong> {aiAnswersCount.toLocaleString()}개
+                </span>
+              )}
+              {humanAnswersCount !== undefined && (
+                <span>
+                  <strong className="font-semibold">User 답변수:</strong> {humanAnswersCount.toLocaleString()}개
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-1">
-          {data.map((item) => {
-            const isCurrentThreshold = item.threshold === currentThreshold;
-            
-            return (
-              <div
-                key={item.threshold}
-                onClick={() => onThresholdChange?.(item.threshold)}
-                className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer ${
-                  isCurrentThreshold 
-                    ? 'bg-primary/10 border border-primary/20' 
-                    : 'bg-muted/30 hover:bg-muted/50 hover:border hover:border-muted-foreground/20'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className={`flex items-center justify-center w-12 h-8 rounded text-xs font-medium ${
-                    isCurrentThreshold 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {Math.round(item.threshold * 100)}%
-                  </div>
-                  <div>
-                    <p className={`text-sm font-medium ${
-                      isCurrentThreshold ? 'text-primary' : 'text-foreground'
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-24">임계값</TableHead>
+              <TableHead className="text-right">자동화율</TableHead>
+              <TableHead className="text-right">자동화 답변 수</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((item) => {
+              const isCurrentThreshold = item.threshold === currentThreshold;
+              
+              return (
+                <TableRow key={item.threshold} className={isCurrentThreshold ? 'bg-primary/5' : ''}>
+                  <TableCell>
+                    <div className={`inline-flex items-center justify-center px-2 py-1 rounded text-xs font-medium ${
+                      isCurrentThreshold 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-muted text-muted-foreground'
                     }`}>
-                      임계값 {item.threshold}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${
-                    isCurrentThreshold ? 'text-primary' : 'text-foreground'
-                  }`}>
+                      {item.threshold}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
                     {item.automation_rate.toFixed(1)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.automated_questions.toLocaleString()}개 자동화
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {item.automated_questions.toLocaleString()}개
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
         
         <div className="mt-6 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground leading-relaxed">
