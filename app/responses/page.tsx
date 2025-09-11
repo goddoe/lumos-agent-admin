@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Filter, Eye, Calendar, Bot, User, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,17 +87,6 @@ export default function ResponsesPage() {
     }
   };
 
-  // Debug: Log automation stats when data changes
-  useEffect(() => {
-    if (data) {
-      const automatedCount = data.answers.filter(answer => isAutomated(answer)).length;
-      const withBothVersions = data.answers.filter(answer => {
-        const { ai, human } = getLatestVersions(answer);
-        return ai && human;
-      }).length;
-      console.log(`Automation stats: ${automatedCount} automated out of ${withBothVersions} with both versions (total: ${data.answers.length})`);
-    }
-  }, [data, similarityThreshold]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -142,7 +131,7 @@ export default function ResponsesPage() {
     };
   };
 
-  const isAutomated = (answer: Answer): boolean => {
+  const isAutomated = useCallback((answer: Answer): boolean => {
     const { ai, human } = getLatestVersions(answer);
     if (!ai || !human) {
       console.log('Missing AI or Human version:', { ai: !!ai, human: !!human, qid: answer.qid });
@@ -158,7 +147,19 @@ export default function ResponsesPage() {
       automated 
     });
     return automated;
-  };
+  }, [similarityThreshold]);
+
+  // Debug: Log automation stats when data changes
+  useEffect(() => {
+    if (data) {
+      const automatedCount = data.answers.filter(answer => isAutomated(answer)).length;
+      const withBothVersions = data.answers.filter(answer => {
+        const { ai, human } = getLatestVersions(answer);
+        return ai && human;
+      }).length;
+      console.log(`Automation stats: ${automatedCount} automated out of ${withBothVersions} with both versions (total: ${data.answers.length})`);
+    }
+  }, [data, similarityThreshold, isAutomated]);
   
   const getSimilarity = (answer: Answer): number => {
     const { ai, human } = getLatestVersions(answer);
@@ -242,7 +243,7 @@ export default function ResponsesPage() {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                이 값 이상의 유사도를 가진 응답을 "자동화됨"으로 분류합니다
+                이 값 이상의 유사도를 가진 응답을 &quot;자동화됨&quot;으로 분류합니다
               </p>
             </div>
             
@@ -254,7 +255,7 @@ export default function ResponsesPage() {
                   <Checkbox
                     id="human-exists"
                     checked={filterHumanExists}
-                    onCheckedChange={setFilterHumanExists}
+                    onCheckedChange={(checked) => setFilterHumanExists(checked === true)}
                   />
                   <label htmlFor="human-exists" className="text-sm flex items-center gap-1">
                     <User className="h-4 w-4" />
@@ -265,7 +266,7 @@ export default function ResponsesPage() {
                   <Checkbox
                     id="automated-only"
                     checked={filterAutomatedOnly}
-                    onCheckedChange={setFilterAutomatedOnly}
+                    onCheckedChange={(checked) => setFilterAutomatedOnly(checked === true)}
                   />
                   <label htmlFor="automated-only" className="text-sm flex items-center gap-1">
                     <Zap className="h-4 w-4" />

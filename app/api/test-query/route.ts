@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
     
     const query2 = await collection.find({
       'created_at': {
-        $gte: dataStartDate.toISOString(),
-        $lte: dataEndDate.toISOString()
+        $gte: dataStartDate,
+        $lte: dataEndDate
       }
     }).toArray();
     
