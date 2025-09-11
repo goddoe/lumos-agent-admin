@@ -1,6 +1,7 @@
 import { getDatabase } from './mongodb';
 import { Answer, Version, AutomationRate, DashboardStats, ThresholdAutomationRate } from './types';
 import { isAutomatedAnswer, getSimilarityScore } from './text-similarity';
+import { unstable_cache } from 'next/cache';
 import { 
   startOfHour, 
   startOfDay, 
@@ -76,9 +77,9 @@ function getQuestionSimilarityScore(answer: Answer): number {
 }
 
 /**
- * Calculate automation rates for multiple thresholds
+ * Calculate automation rates for multiple thresholds (uncached)
  */
-export async function calculateThresholdComparison(): Promise<ThresholdAutomationRate[]> {
+async function _calculateThresholdComparison(): Promise<ThresholdAutomationRate[]> {
   const db = await getDatabase();
   const collection = db.collection<Answer>('answers');
   
@@ -96,6 +97,18 @@ export async function calculateThresholdComparison(): Promise<ThresholdAutomatio
     };
   });
 }
+
+/**
+ * Calculate automation rates for multiple thresholds (cached)
+ */
+export const calculateThresholdComparison = unstable_cache(
+  _calculateThresholdComparison,
+  ['threshold-comparison'],
+  {
+    revalidate: 300, // 5분 TTL
+    tags: ['automation', 'threshold']
+  }
+);
 
 /**
  * Calculate automation rates for a specific time period
@@ -194,9 +207,9 @@ export async function calculateAutomationRates(
 }
 
 /**
- * Get comprehensive dashboard statistics
+ * Get comprehensive dashboard statistics (uncached)
  */
-export async function getDashboardStats(threshold: number = 0.7): Promise<DashboardStats> {
+async function _getDashboardStats(threshold: number = 0.7): Promise<DashboardStats> {
   const now = new Date();
   
   // Calculate different time periods - get last 6 months of data to show proper monthly/weekly breakdown
@@ -245,6 +258,18 @@ export async function getDashboardStats(threshold: number = 0.7): Promise<Dashbo
     monthly_rates: monthlyRates
   };
 }
+
+/**
+ * Get comprehensive dashboard statistics (cached)
+ */
+export const getDashboardStats = unstable_cache(
+  _getDashboardStats,
+  ['dashboard-stats'],
+  {
+    revalidate: 300, // 5분 TTL
+    tags: ['automation', 'dashboard']
+  }
+);
 
 /**
  * Get automation rates for a specific time period and granularity

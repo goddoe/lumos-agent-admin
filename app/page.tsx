@@ -9,6 +9,7 @@ import { PeriodSelector } from '@/components/PeriodSelector';
 import { ThresholdComparison } from '@/components/ThresholdComparison';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DashboardStats, AutomationRate } from '@/lib/types';
+import { initializeCache } from '@/lib/init-cache';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -18,6 +19,11 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedThreshold, setSelectedThreshold] = useState<number>(0.5);
   const [chartThreshold, setChartThreshold] = useState<number>(0.5);
+
+  // Initialize cache warming on component mount
+  useEffect(() => {
+    initializeCache();
+  }, []);
 
   // Fetch dashboard stats for chart
   useEffect(() => {
